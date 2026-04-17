@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import htmlPdf from 'html-pdf-node';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -21,7 +20,7 @@ interface Report {
   strategy: string;
 }
 
-function generatePrintHTML(clientName: string, report: Report): string {
+function generateEmailHTML(clientName: string, report: Report): string {
   const vision = Number(report.alignment_score_vision) || 0;
   const reality = Number(report.alignment_score_reality) || 0;
   const gap = Math.max(0, vision - reality).toFixed(1);
@@ -41,14 +40,17 @@ function generatePrintHTML(clientName: string, report: Report): string {
 
   const sectionsHTML = sections.map((section) => {
     const paragraphs = section.content.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
-    const paragraphsHTML = paragraphs.map((p) => `<p>${p}</p>`).join('');
+    const paragraphsHTML = paragraphs.map((p) => `<p style="font-size: 15px; line-height: 1.8; margin-bottom: 20px; color: #2a2520;">${p}</p>`).join('');
 
     return `
-      <div class="section">
-        <div class="section-title">${section.title.toUpperCase()}</div>
-        ${section.subtitle ? `<h2 class="metatype-name">${section.subtitle}</h2>` : `<h2>${section.title}</h2>`}
-        ${(section as any).gap ? `<div class="gap-scores">${(section as any).gap}</div>` : ''}
-        <div class="section-content">${paragraphsHTML}</div>
+      <div style="margin-bottom: 50px; page-break-inside: avoid;">
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; letter-spacing: 2px; color: #B87333; margin-bottom: 12px; text-transform: uppercase;">${section.title.toUpperCase()}</div>
+        ${section.subtitle 
+          ? `<h2 style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; color: #B87333; font-size: 32px; font-weight: 400; margin-bottom: 24px;">${section.subtitle}</h2>` 
+          : `<h2 style="font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 400; margin-bottom: 24px; color: #1a1815;">${section.title}</h2>`
+        }
+        ${(section as any).gap ? `<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #655d52; text-align: center; margin-bottom: 28px; padding: 14px; background: #f7f2ea; border-radius: 4px; border: 1px solid #e8dcc8;">${(section as any).gap}</div>` : ''}
+        <div>${paragraphsHTML}</div>
       </div>
     `;
   }).join('');
@@ -58,182 +60,39 @@ function generatePrintHTML(clientName: string, report: Report): string {
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Freedom Audit Report - ${clientName}</title>
-      <style>
-        @page { 
-          size: letter;
-          margin: 0.75in;
-        }
-        
-        * { 
-          margin: 0; 
-          padding: 0; 
-          box-sizing: border-box; 
-        }
-        
-        body {
-          font-family: Georgia, 'Times New Roman', serif;
-          color: #1a1815;
-          background: #ffffff;
-          line-height: 1.7;
-        }
-        
-        .cover {
-          text-align: center;
-          padding: 80px 0 100px;
-          border-bottom: 3px solid #B87333;
-          margin-bottom: 60px;
-          page-break-after: always;
-        }
-        
-        .eyebrow {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 10px;
-          letter-spacing: 3px;
-          color: #B87333;
-          margin-bottom: 40px;
-          text-transform: uppercase;
-        }
-        
-        .cover h1 {
-          font-size: 48px;
-          font-weight: 400;
-          margin-bottom: 16px;
-          color: #1a1815;
-        }
-        
-        .cover .rule {
-          width: 60px;
-          height: 2px;
-          background: #B87333;
-          margin: 30px auto;
-        }
-        
-        .client-name {
-          font-style: italic;
-          font-size: 18px;
-          color: #B87333;
-          margin-top: 30px;
-        }
-        
-        .date {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 10px;
-          color: #655d52;
-          margin-top: 16px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        
-        .section {
-          page-break-inside: avoid;
-          margin-bottom: 50px;
-          page-break-before: always;
-        }
-        
-        .section:first-of-type {
-          page-break-before: auto;
-        }
-        
-        .section-title {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 9px;
-          letter-spacing: 2px;
-          color: #B87333;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-        }
-        
-        .section h2 {
-          font-size: 28px;
-          font-weight: 400;
-          margin-bottom: 24px;
-          color: #1a1815;
-        }
-        
-        .metatype-name {
-          font-style: italic;
-          color: #B87333 !important;
-          font-size: 32px !important;
-        }
-        
-        .gap-scores {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 12px;
-          color: #655d52;
-          text-align: center;
-          margin-bottom: 28px;
-          padding: 14px;
-          background: #f7f2ea;
-          border-radius: 4px;
-          border: 1px solid #e8dcc8;
-        }
-        
-        .section-content p {
-          font-size: 14px;
-          line-height: 1.8;
-          margin-bottom: 20px;
-          color: #2a2520;
-        }
-        
-        .footer {
-          text-align: center;
-          padding-top: 60px;
-          border-top: 2px solid #B87333;
-          margin-top: 80px;
-          page-break-inside: avoid;
-        }
-        
-        .footer .end {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 9px;
-          letter-spacing: 2px;
-          color: #655d52;
-          text-transform: uppercase;
-        }
-        
-        .footer .brand {
-          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-          font-size: 11px;
-          letter-spacing: 2px;
-          color: #B87333;
-          margin-top: 12px;
-          text-transform: uppercase;
-        }
-      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Your Freedom Audit Report</title>
     </head>
-    <body>
-      <div class="cover">
-        <div class="eyebrow">The Freedom Audit</div>
-        <h1>Your Report</h1>
-        <div class="rule"></div>
-        <div class="client-name">Prepared for ${clientName}</div>
-        <div class="date">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-      </div>
-      
-      ${sectionsHTML}
-      
-      <div class="footer">
-        <div class="end">End of Report</div>
-        <div class="brand">Unbreakable Wealth</div>
+    <body style="font-family: Georgia, 'Times New Roman', serif; color: #1a1815; background: #ffffff; line-height: 1.7; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        
+        <!-- Cover -->
+        <div style="text-align: center; padding: 60px 0 80px; border-bottom: 3px solid #B87333; margin-bottom: 60px;">
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; letter-spacing: 3px; color: #B87333; margin-bottom: 30px; text-transform: uppercase;">The Freedom Audit</div>
+          <h1 style="font-size: 42px; font-weight: 400; margin: 0 0 20px 0; color: #1a1815;">Your Report</h1>
+          <div style="width: 60px; height: 2px; background: #B87333; margin: 25px auto;"></div>
+          <div style="font-style: italic; font-size: 18px; color: #B87333; margin-top: 25px;">Prepared for ${clientName}</div>
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; color: #655d52; margin-top: 16px; text-transform: uppercase; letter-spacing: 1px;">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </div>
+        
+        <!-- Sections -->
+        ${sectionsHTML}
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 60px; border-top: 2px solid #B87333; margin-top: 80px;">
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; letter-spacing: 2px; color: #655d52; text-transform: uppercase;">End of Report</div>
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 12px; letter-spacing: 2px; color: #B87333; margin-top: 12px; text-transform: uppercase;">Unbreakable Wealth</div>
+        </div>
+        
+        <div style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #e8dcc8; text-align: center;">
+          <p style="font-size: 14px; color: #655d52; margin-bottom: 16px;">If you'd like to discuss your results or explore working together, simply reply to this email.</p>
+          <p style="font-size: 13px; color: #999;">— Mike Brown<br/>Unbreakable Wealth</p>
+        </div>
+        
       </div>
     </body>
     </html>
   `;
-}
-
-async function generatePDF(clientName: string, report: Report): Promise<Buffer> {
-  const html = generatePrintHTML(clientName, report);
-  
-  const file = { content: html };
-  const options = { 
-    format: 'Letter',
-    margin: { top: '0.75in', right: '0.75in', bottom: '0.75in', left: '0.75in' },
-    printBackground: true,
-  };
-
-  const pdfBuffer = await htmlPdf.generatePdf(file, options);
-  return pdfBuffer;
 }
 
 export async function POST(req: NextRequest) {
@@ -244,28 +103,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Generate PDF
-    const pdfBuffer = await generatePDF(clientName, report);
+    const reportHTML = generateEmailHTML(clientName, report);
 
-    // Send to client
+    // Send beautiful HTML email to client
     await resend.emails.send({
       from: 'Freedom Audit <audit@unbreakablewealth.com>',
       replyTo: 'mike@mbrown.co',
       to: clientEmail,
       subject: `Your Freedom Audit Report - ${clientName}`,
-      html: `
-        <p>Hi ${clientName},</p>
-        <p>Thank you for completing The Freedom Audit.</p>
-        <p>Your personalized report is attached as a PDF. This document maps where you stand across the dimensions that determine true freedom.</p>
-        <p>If you'd like to discuss your results or explore working together, simply reply to this email.</p>
-        <p>— Mike Brown<br/>Unbreakable Wealth</p>
-      `,
-      attachments: [
-        {
-          filename: `freedom-audit-${clientName.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-          content: pdfBuffer.toString('base64'),
-        },
-      ],
+      html: reportHTML,
     });
 
     // Send raw answers to admin
