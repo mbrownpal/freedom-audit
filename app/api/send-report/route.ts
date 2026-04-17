@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     // Send to client
     await resend.emails.send({
       from: 'Freedom Audit <audit@unbreakablewealth.com>',
-      reply_to: 'mike@mbrown.co',
+      replyTo: 'mike@mbrown.co',
       to: clientEmail,
       subject: `Your Freedom Audit Report - ${clientName}`,
       html: `
