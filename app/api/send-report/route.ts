@@ -114,11 +114,19 @@ export async function POST(req: NextRequest) {
       html: reportHTML,
     });
 
+    // Send beautiful HTML report to admin (you)
+    await resend.emails.send({
+      from: 'Freedom Audit <audit@unbreakablewealth.com>',
+      to: 'mike@mbrown.co',
+      subject: `Freedom Audit Report - ${clientName} (Your Copy)`,
+      html: reportHTML,
+    });
+
     // Send raw answers to admin
     await resend.emails.send({
       from: 'Freedom Audit <audit@unbreakablewealth.com>',
       to: 'mike@mbrown.co',
-      subject: `New Freedom Audit Submission - ${clientName}`,
+      subject: `Freedom Audit Raw Answers - ${clientName}`,
       html: `
         <p><strong>New Freedom Audit completed by:</strong> ${clientName} (${clientEmail})</p>
         <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
