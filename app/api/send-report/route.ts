@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import PDFDocument from 'pdfkit';
-import { Readable } from 'stream';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -22,101 +20,164 @@ interface Report {
   strategy: string;
 }
 
-async function generatePDF(clientName: string, report: Report): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'letter', margins: { top: 80, bottom: 64, left: 64, right: 64 } });
-    const chunks: Buffer[] = [];
+function generateHTMLReport(clientName: string, report: Report): string {
+  const vision = Number(report.alignment_score_vision) || 0;
+  const reality = Number(report.alignment_score_reality) || 0;
+  const gap = Math.max(0, vision - reality).toFixed(1);
 
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+  const sections = [
+    { title: 'Your Metatype', subtitle: report.metatype_name, content: report.metatype_description, isMetatype: true },
+    { title: 'Freedom of Health', content: report.pillar_health },
+    { title: 'Freedom of Relationships', content: report.pillar_relationships },
+    { title: 'Freedom of Time', content: report.pillar_time },
+    { title: 'Freedom of Mind', content: report.pillar_mind },
+    { title: 'Freedom of Soul', content: report.pillar_soul },
+    { title: 'Financial Foundation', content: report.pillar_finances },
+    { title: 'Your Inner State', content: report.inner_state + '\n\n' + report.patterns },
+    { title: 'The Gap', content: report.the_gap_narrative, gap: `Vision: ${vision.toFixed(1)} | Gap: ${gap} | Reality: ${reality.toFixed(1)}` },
+    { title: 'Your Strategy', content: report.strategy },
+  ];
 
-    // Colors
-    const COPPER = '#B87333';
-    const INK = '#1a1815';
-    const MUTED = '#655d52';
+  const sectionsHTML = sections.map((section) => {
+    const paragraphs = section.content.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    const paragraphsHTML = paragraphs.map((p) => `<p>${p}</p>`).join('');
 
-    // Helper to add paragraphs
-    const addParagraphs = (text: string) => {
-      const paragraphs = text.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-      paragraphs.forEach((para, idx) => {
-        doc.font('Times-Roman').fontSize(12).fillColor(INK).text(para, {
-          align: 'left',
-          lineGap: 6,
-        });
-        if (idx < paragraphs.length - 1) {
-          doc.moveDown(0.8);
+    return `
+      <div class="section">
+        <div class="section-title">${section.title.toUpperCase()}</div>
+        ${section.subtitle ? `<h2 class="metatype-name">${section.subtitle}</h2>` : `<h2>${section.title}</h2>`}
+        ${section.gap ? `<div class="gap-scores">${section.gap}</div>` : ''}
+        <div class="section-content">${paragraphsHTML}</div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Freedom Audit Report - ${clientName}</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: Georgia, 'Times New Roman', serif;
+          color: #1a1815;
+          background: #fff;
+          line-height: 1.8;
+          padding: 80px 64px;
+          max-width: 800px;
+          margin: 0 auto;
         }
-      });
-    };
-
-    // Cover
-    doc.font('Helvetica').fontSize(9).fillColor(COPPER).text('THE FREEDOM AUDIT', { align: 'center' });
-    doc.moveDown(2);
-    doc.font('Times-Roman').fontSize(42).fillColor(INK).text('Your Report', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.moveTo(doc.page.width / 2 - 24, doc.y).lineTo(doc.page.width / 2 + 24, doc.y).strokeColor(COPPER).stroke();
-    doc.moveDown(1);
-    doc.font('Times-Italic').fontSize(16).fillColor(COPPER).text(`Prepared for ${clientName}`, { align: 'center' });
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(9).fillColor(MUTED).text(new Date().toLocaleDateString(), { align: 'center' });
-
-    // Sections
-    const sections = [
-      { title: 'Your Metatype', isMetatype: true, content: report.metatype_description, metatypeName: report.metatype_name },
-      { title: 'Freedom of Health', content: report.pillar_health },
-      { title: 'Freedom of Relationships', content: report.pillar_relationships },
-      { title: 'Freedom of Time', content: report.pillar_time },
-      { title: 'Freedom of Mind', content: report.pillar_mind },
-      { title: 'Freedom of Soul', content: report.pillar_soul },
-      { title: 'Financial Foundation', content: report.pillar_finances },
-      { title: 'Your Inner State', content: report.inner_state, extra: report.patterns },
-      { title: 'The Gap', content: report.the_gap_narrative, isGap: true },
-      { title: 'Your Strategy', content: report.strategy },
-    ];
-
-    sections.forEach((section) => {
-      doc.addPage();
-      doc.font('Helvetica').fontSize(9).fillColor(COPPER).text(section.title.toUpperCase());
-      doc.moveDown(0.8);
-
-      if (section.isMetatype && section.metatypeName) {
-        doc.font('Times-Italic').fontSize(28).fillColor(COPPER).text(section.metatypeName);
-        doc.moveDown(1);
-      } else {
-        doc.font('Times-Roman').fontSize(26).fillColor(INK).text(section.title);
-        doc.moveDown(0.8);
-      }
-
-      if (section.isGap) {
-        // Add gap visualization (text-based since we can't render complex graphics easily)
-        const vision = Number(report.alignment_score_vision) || 0;
-        const reality = Number(report.alignment_score_reality) || 0;
-        const gap = Math.max(0, vision - reality);
-
-        doc.font('Helvetica').fontSize(11).fillColor(MUTED);
-        doc.text(`Your Vision: ${vision.toFixed(1)}  |  The Gap: ${gap.toFixed(1)}  |  Your Reality: ${reality.toFixed(1)}`, { align: 'center' });
-        doc.moveDown(1);
-      }
-
-      addParagraphs(section.content);
-
-      if (section.extra) {
-        doc.moveDown(1);
-        doc.moveTo(64, doc.y).lineTo(104, doc.y).strokeColor(COPPER).stroke();
-        doc.moveDown(0.8);
-        addParagraphs(section.extra);
-      }
-    });
-
-    // Footer
-    doc.addPage();
-    doc.font('Helvetica').fontSize(9).fillColor(MUTED).text('END OF REPORT', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fillColor(COPPER).text('UNBREAKABLE WEALTH', { align: 'center' });
-
-    doc.end();
-  });
+        .cover {
+          text-align: center;
+          padding: 120px 0;
+          border-bottom: 2px solid #B87333;
+          margin-bottom: 80px;
+        }
+        .cover .eyebrow {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 11px;
+          letter-spacing: 2px;
+          color: #B87333;
+          margin-bottom: 40px;
+        }
+        .cover h1 {
+          font-size: 56px;
+          font-weight: 400;
+          margin-bottom: 20px;
+        }
+        .cover .client-name {
+          font-style: italic;
+          font-size: 20px;
+          color: #B87333;
+          margin-top: 40px;
+        }
+        .cover .date {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 11px;
+          color: #655d52;
+          margin-top: 20px;
+        }
+        .section {
+          page-break-inside: avoid;
+          margin-bottom: 80px;
+        }
+        .section-title {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #B87333;
+          margin-bottom: 12px;
+        }
+        .section h2 {
+          font-size: 32px;
+          font-weight: 400;
+          margin-bottom: 24px;
+          color: #1a1815;
+        }
+        .metatype-name {
+          font-style: italic;
+          color: #B87333 !important;
+          font-size: 36px !important;
+        }
+        .gap-scores {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 13px;
+          color: #655d52;
+          text-align: center;
+          margin-bottom: 32px;
+          padding: 16px;
+          background: #f7f2ea;
+          border-radius: 4px;
+        }
+        .section-content p {
+          font-size: 16px;
+          line-height: 1.8;
+          margin-bottom: 24px;
+        }
+        .footer {
+          text-align: center;
+          padding-top: 80px;
+          border-top: 2px solid #B87333;
+          margin-top: 120px;
+        }
+        .footer .end {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 10px;
+          letter-spacing: 2px;
+          color: #655d52;
+        }
+        .footer .brand {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          font-size: 12px;
+          letter-spacing: 2px;
+          color: #B87333;
+          margin-top: 12px;
+        }
+        @media print {
+          body { padding: 40px; }
+          .section { page-break-before: always; }
+          .cover { page-break-after: always; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="cover">
+        <div class="eyebrow">THE FREEDOM AUDIT</div>
+        <h1>Your Report</h1>
+        <div class="client-name">Prepared for ${clientName}</div>
+        <div class="date">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      </div>
+      ${sectionsHTML}
+      <div class="footer">
+        <div class="end">END OF REPORT</div>
+        <div class="brand">UNBREAKABLE WEALTH</div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 export async function POST(req: NextRequest) {
@@ -127,8 +188,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email not configured' }, { status: 500 });
     }
 
-    // Generate PDF
-    const pdfBuffer = await generatePDF(clientName, report);
+    // Generate HTML report
+    const htmlReport = generateHTMLReport(clientName, report);
 
     // Send to client
     await resend.emails.send({
@@ -158,8 +219,8 @@ export async function POST(req: NextRequest) {
       `,
       attachments: [
         {
-          filename: `freedom-audit-${clientName.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-          content: pdfBuffer,
+          filename: `freedom-audit-${clientName.toLowerCase().replace(/\s+/g, '-')}.html`,
+          content: htmlReport,
         },
       ],
     });
