@@ -193,7 +193,8 @@ export async function POST(req: NextRequest) {
 
     // Send to client
     await resend.emails.send({
-      from: 'Freedom Audit <onboarding@resend.dev>',
+      from: 'Freedom Audit <audit@unbreakablewealth.com>',
+      reply_to: 'mike@mbrown.co',
       to: clientEmail,
       subject: `Your Freedom Audit Report - ${clientName}`,
       html: `
@@ -227,7 +228,7 @@ export async function POST(req: NextRequest) {
 
     // Send raw answers to admin
     await resend.emails.send({
-      from: 'Freedom Audit <onboarding@resend.dev>',
+      from: 'Freedom Audit <audit@unbreakablewealth.com>',
       to: process.env.ADMIN_EMAIL || 'mike@mbrown.co',
       subject: `New Freedom Audit Submission - ${clientName}`,
       html: `
