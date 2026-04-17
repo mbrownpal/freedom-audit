@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
+import htmlPdf from 'html-pdf-node';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -226,30 +225,15 @@ function generatePrintHTML(clientName: string, report: Report): string {
 async function generatePDF(clientName: string, report: Report): Promise<Buffer> {
   const html = generatePrintHTML(clientName, report);
   
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-  });
-
-  const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
-  
-  const pdf = await page.pdf({
+  const file = { content: html };
+  const options = { 
     format: 'Letter',
-    margin: {
-      top: '0.75in',
-      right: '0.75in',
-      bottom: '0.75in',
-      left: '0.75in',
-    },
+    margin: { top: '0.75in', right: '0.75in', bottom: '0.75in', left: '0.75in' },
     printBackground: true,
-  });
+  };
 
-  await browser.close();
-  
-  return Buffer.from(pdf);
+  const pdfBuffer = await htmlPdf.generatePdf(file, options);
+  return pdfBuffer;
 }
 
 export async function POST(req: NextRequest) {
@@ -279,7 +263,7 @@ export async function POST(req: NextRequest) {
       attachments: [
         {
           filename: `freedom-audit-${clientName.toLowerCase().replace(/\s+/g, '-')}.pdf`,
-          content: pdfBuffer,
+          content: pdfBuffer.toString('base64'),
         },
       ],
     });
