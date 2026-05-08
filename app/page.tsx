@@ -667,6 +667,27 @@ function Report({ clientName, report, onRestart }: any) {
     URL.revokeObjectURL(url);
   };
 
+  const handleBookCall = async () => {
+    try {
+      // Send report to coach
+      await fetch('/api/send-to-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName,
+          report,
+          action: 'book_call'
+        })
+      });
+      // Redirect to booking page
+      window.location.href = '/booking';
+    } catch (error) {
+      console.error('Error booking call:', error);
+      // Still redirect even if email fails
+      window.location.href = '/booking';
+    }
+  };
+
   const generateReportHTML = (name: string, rpt: any) => {
     const vision = Number(rpt.alignment_score_vision) || 0;
     const reality = Number(rpt.alignment_score_reality) || 0;
@@ -765,7 +786,8 @@ h1 { font-size: 56px; font-weight: 400; margin-bottom: 20px; }
           </div>
         )}
         <div className="actions">
-          <button className="fa-btn" onClick={handleDownload}>Download Report</button>
+          <button className="fa-btn" onClick={handleBookCall}>Book a Call to Discuss Your Results</button>
+          <button className="fa-btn fa-btn-ghost" onClick={handleDownload}>Download Report</button>
           <button className="fa-btn fa-btn-ghost" onClick={onRestart}>Start Over</button>
         </div>
       </div>
