@@ -32,11 +32,11 @@ const QUESTIONS = [
 const TOTAL_QUESTIONS = QUESTIONS.length;
 
 const GEN_MESSAGES = [
-  'Mapping your inner terrain…',
-  'Reading between the lines…',
-  'Synthesizing patterns…',
-  'Calculating your Alignment Score…',
-  'Generating your report…',
+  'Mapping your inner terrainâ¦',
+  'Reading between the linesâ¦',
+  'Synthesizing patternsâ¦',
+  'Calculating your Alignment Scoreâ¦',
+  'Generating your reportâ¦',
 ];
 
 const initialState = {
@@ -183,13 +183,13 @@ export default function FreedomAudit() {
         });
         
         if (emailResponse.ok) {
-          console.log('✅ Email sent successfully');
+          console.log('â Email sent successfully');
         } else {
           const errorData = await emailResponse.json().catch(() => ({}));
-          console.error('❌ Email send failed:', errorData);
+          console.error('â Email send failed:', errorData);
         }
       } catch (emailError) {
-        console.error('❌ Email request failed:', emailError);
+        console.error('â Email request failed:', emailError);
       }
     } catch (err) {
       console.error('[Generation] Error:', err);
@@ -277,64 +277,18 @@ export default function FreedomAudit() {
 
 function Welcome({ clientName, clientEmail, onName, onEmail, onBegin }: any) {
   const canBegin = clientName.trim().length > 0 && clientEmail.trim().length > 0;
-
   return (
     <div className="fa-welcome">
       <div className="fa-welcome-inner">
+        <div className="fa-eyebrow">Unbreakable Wealth Â· Private Intake</div>
         <h1>The <em>Freedom</em> Audit</h1>
-        <p className="lede">Most people are far wealthier than they realize—and far less free.</p>
+        <p className="lede">A comprehensive map of where you actually stand.</p>
         <div className="fa-rule" />
-
-        <div className="body">
-          <p>
-            You've done what you were supposed to do. You've worked hard. You've built something. Maybe you've hit the numbers you thought mattered.
-          </p>
-
-          <p>
-            And yet.
-          </p>
-
-          <p style={{textAlign: "center", fontStyle: "italic", margin: "2rem auto", fontSize: "1.1em"}}>
-            Is this really it?
-          </p>
-
-          <p>
-            That question—quiet, persistent, uncomfortable—is the signal. It's not a sign of failure. It's a sign you're ready for something real.
-          </p>
-
-          <p>
-            The Freedom Audit isn't another personality test. It's not going to tell you what color you are or what archetype fits. This is a mirror. A map. A way to see, clearly and honestly, where you actually stand across the dimensions that determine whether your life feels like yours.
-          </p>
-
-          <p style={{textAlign: "center", fontWeight: 600, margin: "1.5rem auto"}}>
-            Health. Relationships. Time. Mind. Soul. Money.
-          </p>
-
-          <p>
-            Not as aspirations. As <em>current reality</em>.
-          </p>
-
-          <p>
-            This takes 60–75 minutes. It's 22 questions, but they're the ones that matter. The ones you've been avoiding. The ones that, when answered honestly, change everything.
-          </p>
-
-          <p>
-            You'll get a personalized report that doesn't just diagnose—it shows you the gap between where you are and where you're capable of being. And more importantly, it gives you a strategy for closing it.
-          </p>
-
-          <p style={{textAlign: "center", fontWeight: 600, fontStyle: "italic"}}>
-            This is for people who've already won the game they were playing—
-            <br/>and are finally ready to admit it wasn't the right game.
-          </p>
-
-          <p>
-            If you're here, you don't need more tactics. You need clarity. You need to know what's actually true. You need to stop pretending.
-          </p>
-
-          <p>
-            So let's find out.
-          </p>
-        </div>
+        <p className="body">
+          This audit maps your life across the dimensions that actually determine freedom. 
+          It takes about 60â75 minutes. The deeper you go, the more useful your results will be. 
+          If you prefer to talk rather than type, use voice-to-text on your device keyboard.
+        </p>
 
         <div className="fa-input-grid">
           <div className="fa-input-col">
@@ -361,10 +315,8 @@ function Welcome({ clientName, clientEmail, onName, onEmail, onBegin }: any) {
           </div>
         </div>
 
-        <div className="meta">{TOTAL_QUESTIONS} questions · 10 sections</div>
-        <button className="fa-btn" onClick={onBegin} disabled={!canBegin}>
-          Begin the Audit
-        </button>
+        <div className="meta">{TOTAL_QUESTIONS} questions Â· 10 sections</div>
+        <button className="fa-btn" onClick={onBegin} disabled={!canBegin}>Begin</button>
       </div>
     </div>
   );
@@ -432,7 +384,7 @@ function Assessment({ state, dispatch, onComplete }: any) {
             onChange={(v: string) =>
               dispatch({ type: 'ANSWER', index: state.currentQuestion, value: v })
             }
-            placeholder="Take your time…"
+            placeholder="Take your timeâ¦"
           />
 
           <div className="fa-hint">Tip: use voice-to-text for a more natural response</div>
@@ -443,7 +395,7 @@ function Assessment({ state, dispatch, onComplete }: any) {
               onClick={() => dispatch({ type: 'BACK' })}
               disabled={state.currentQuestion === 0}
             >
-              ← Back
+              â Back
             </button>
             <span className="spacer" />
             <button
@@ -454,7 +406,7 @@ function Assessment({ state, dispatch, onComplete }: any) {
               }}
               disabled={!canAdvance}
             >
-              {isLast ? 'Complete Audit' : 'Next →'}
+              {isLast ? 'Complete Audit' : 'Next â'}
             </button>
           </div>
         </div>
@@ -667,27 +619,6 @@ function Report({ clientName, report, onRestart }: any) {
     URL.revokeObjectURL(url);
   };
 
-  const handleBookCall = async () => {
-    try {
-      // Send report to coach
-      await fetch('/api/send-to-coach', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientName,
-          report,
-          action: 'book_call'
-        })
-      });
-      // Redirect to booking page
-      window.location.href = '/booking';
-    } catch (error) {
-      console.error('Error booking call:', error);
-      // Still redirect even if email fails
-      window.location.href = '/booking';
-    }
-  };
-
   const generateReportHTML = (name: string, rpt: any) => {
     const vision = Number(rpt.alignment_score_vision) || 0;
     const reality = Number(rpt.alignment_score_reality) || 0;
@@ -774,10 +705,10 @@ h1 { font-size: 56px; font-weight: 400; margin-bottom: 20px; }
       <TabPanel id={active} report={report} />
 
       <div className="fa-report-footer">
-        <div className="mark">End of Report · Unbreakable Wealth</div>
+        <div className="mark">End of Report Â· Unbreakable Wealth</div>
         {emailStatus === 'sent' && (
           <div style={{ color: '#10b981', marginBottom: '16px', textAlign: 'center' }}>
-            ✓ Report emailed successfully
+            â Report emailed successfully
           </div>
         )}
         {emailStatus === 'error' && (
@@ -786,8 +717,7 @@ h1 { font-size: 56px; font-weight: 400; margin-bottom: 20px; }
           </div>
         )}
         <div className="actions">
-          <button className="fa-btn" onClick={handleBookCall}>Book a Call to Discuss Your Results</button>
-          <button className="fa-btn fa-btn-ghost" onClick={handleDownload}>Download Report</button>
+          <button className="fa-btn" onClick={handleDownload}>Download Report</button>
           <button className="fa-btn fa-btn-ghost" onClick={onRestart}>Start Over</button>
         </div>
       </div>
