@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+// Increase timeout for email API calls
+export const maxDuration = 30; // seconds
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface Report {
