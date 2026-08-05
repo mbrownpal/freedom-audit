@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
 // Increase function timeout for long-running LLM calls
-export const maxDuration = 60; // seconds (Pro plan supports up to 300)
+export const maxDuration = 120; // seconds (Pro plan supports up to 300)
 
 const SYSTEM_PROMPT = `You are the assessment engine behind The Freedom Audit, created by Mike Brown of Unbreakable Wealth. Your job is to take a client's raw assessment answers and generate a personalized report that makes them feel deeply seen, then reveals the truth about where they actually stand.
 
